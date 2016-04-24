@@ -1,6 +1,11 @@
-usage: epub [-h] [-d] EPUB
+= Python3 epub reader =
 
-python/curses epub reader. Requires BeautifulSoup
+python/curses epub reader. Requires BeautifulSoup.
+Based on https://github.com/rupa/epub
+
+== Usage ==
+
+epub [-h] [-d] EPUB
 
 Keyboard commands:
     Esc/q          - quit
