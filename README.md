@@ -1,9 +1,9 @@
-= Python3 epub reader =
+# Python3 epub reader #
 
 python/curses epub reader. Requires BeautifulSoup.
 Based on https://github.com/rupa/epub
 
-== Usage ==
+## Usage ##
 
 epub [-h] [-d] EPUB
 
