@@ -18,11 +18,14 @@ Keyboard commands:
         i          - open images on page in web browser
 '''
 
-import curses.wrapper, curses.ascii
-import formatter, htmllib, locale, os, StringIO, re, readline, tempfile, zipfile
+import curses
+import curses.ascii
+from html.parser import HTMLParser
+from io import StringIO
+import formatter, locale, os, re, readline, tempfile, zipfile
 import base64, webbrowser
 
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 
 try:
     from fabulous import image
@@ -63,40 +66,11 @@ def open_image(screen, name, s):
     image_file.write(s)
     image_file.close()
     try:
-        print image.Image(image_file.name)
+        print(image.Image(image_file.name))
     except:
-        print image_file.name
+        print(image_file.name)
     finally:
         os.unlink(image_file.name)
-
-def textify(html_snippet, img_size=(80, 45), maxcol=72):
-    ''' text dump of html '''
-    class Parser(htmllib.HTMLParser):
-        def anchor_end(self):
-            self.anchor = None
-        def handle_image(self, source, alt, ismap, alight, width, height):
-            global basedir
-            self.handle_data(
-                '[img="{0}{1}" "{2}"]'.format(basedir, source, alt)
-            )
-
-    class Formatter(formatter.AbstractFormatter):
-        pass
-
-    class Writer(formatter.DumbWriter):
-        def __init__(self, fl, maxcol=72):
-            formatter.DumbWriter.__init__(self, fl)
-            self.maxcol = maxcol
-        def send_label_data(self, data):
-            self.send_flowing_data(data)
-            self.send_flowing_data(' ')
-
-    o = StringIO.StringIO()
-    p = Parser(Formatter(Writer(o, maxcol)))
-    p.feed(html_snippet)
-    p.close()
-
-    return o.getvalue()
 
 def table_of_contents(fl):
     global basedir
@@ -112,7 +86,7 @@ def table_of_contents(fl):
     soup =  BeautifulSoup(fl.read(opf))
 
     # title
-    yield (soup.find('dc:title').text, None)
+    title = (soup.find('dc:title').text, None)
 
     # all files, not in order
     x, ncx = {}, None
@@ -140,21 +114,20 @@ def table_of_contents(fl):
                 z[k] = navpoint.navlabel.text
 
     # output
+    outputs = [title]
     for section in y:
         if section in z:
-            yield (z[section].encode('utf-8'), section.encode('utf-8'))
+            outputs.append((z[section].strip(), section))
         else:
-            yield (u'', section.encode('utf-8').strip())
+            outputs.append(('', section))
+    return outputs
 
 def list_chaps(screen, chaps, start, length):
     for i, (title, src) in enumerate(chaps[start:start+length]):
-        try:
-            if start == 0:
-                screen.addstr(i, 0, '      {0}'.format(title), curses.A_BOLD)
-            else:
-                screen.addstr(i, 0, '{0:-5} {1}'.format(start, title))
-        except:
-            pass
+        if start == 0:
+            screen.addstr(i, 0, '      {0}'.format(title), curses.A_BOLD)
+        else:
+            screen.addstr(i, 0, '{0:-5} {1}'.format(start, title), curses.A_UNDERLINE)
         start += 1
     screen.refresh()
     return i
@@ -167,17 +140,14 @@ def dump_epub(fl, maxcol=float("+inf")):
     if not check_epub(fl):
         return
     fl = zipfile.ZipFile(fl, 'r')
-    chaps = [i for i in table_of_contents(fl)]
+    chaps = table_of_contents(fl)
     for title, src in chaps:
-        print title
-        print '-' * len(title)
+        print(title)
+        print('-' * len(title))
         if src:
             soup = BeautifulSoup(fl.read(src))
-            print textify(
-                unicode(soup.find('body')).encode('utf-8'),
-                maxcol=maxcol,
-            )
-        print '\n'
+            print(soup.find('body').get_text())
+        print('\n')
 
 def curses_epub(screen, fl):
     if not check_epub(fl):
@@ -186,7 +156,7 @@ def curses_epub(screen, fl):
     #curses.mousemask(curses.BUTTON1_CLICKED)
 
     fl = zipfile.ZipFile(fl, 'r')
-    chaps = [i for i in table_of_contents(fl)]
+    chaps = table_of_contents(fl)
     chaps_pos = [0 for i in chaps]
     start = 0
     cursor_row = 0
@@ -242,16 +212,14 @@ def curses_epub(screen, fl):
 
         # to chapter
         elif ch in [curses.ascii.HT, curses.KEY_RIGHT, curses.KEY_LEFT]:
-            if chaps[start + cursor_row][1]:
-                html = fl.read(chaps[start + cursor_row][1])
+            chap_entry = chaps[start + cursor_row]
+            chap_source = chap_entry[1]
+            if chap_source:
+                html = fl.read(chap_source)
                 soup = BeautifulSoup(html)
-                chap = textify(
-                    unicode(soup.find('body')).encode('utf-8'),
-                    img_size=screen.getmaxyx(),
-                    maxcol=screen.getmaxyx()[1]
-                ).split('\n')
+                chap = soup.find('body').get_text().split('\n')
             else:
-                chap = ''
+                chap = ['']
             screen.clear()
             curses.curs_set(0)
 
@@ -259,10 +227,8 @@ def curses_epub(screen, fl):
             while True:
                 maxy, maxx = screen.getmaxyx()
                 images = []
-                for i, line in enumerate(chap[
-                    chaps_pos[start + cursor_row]:
-                    chaps_pos[start + cursor_row] + maxy
-                ]):
+                chap_pos = chaps_pos[start + cursor_row]
+                for i, line in enumerate(chap[chap_pos:chap_pos + maxy]):
                     try:
                         screen.addstr(i, 0, line)
                         mch = re.search('\[img="([^"]+)" "([^"]*)"\]', line)
@@ -288,11 +254,11 @@ def curses_epub(screen, fl):
                     break
 
                 # up/down page
-                elif ch in [curses.KEY_DOWN]:
+                elif ch in [curses.KEY_NPAGE]:
                     if chaps_pos[start + cursor_row] + maxy - 1 < len(chap):
                         chaps_pos[start + cursor_row] += maxy - 1
                         screen.clear()
-                elif ch in [curses.KEY_UP]:
+                elif ch in [curses.KEY_PPAGE]:
                     if chaps_pos[start + cursor_row] > 0:
                         chaps_pos[start + cursor_row] -= maxy - 1
                         if chaps_pos[start + cursor_row] < 0:
@@ -300,11 +266,11 @@ def curses_epub(screen, fl):
                         screen.clear()
 
                 # up/down line
-                elif ch in [curses.KEY_NPAGE]:
+                elif ch in [curses.KEY_DOWN]:
                     if chaps_pos[start + cursor_row] + maxy - 1 < len(chap):
                         chaps_pos[start + cursor_row] += 1
                         screen.clear()
-                elif ch in [curses.KEY_PPAGE]:
+                elif ch in [curses.KEY_UP]:
                     if chaps_pos[start + cursor_row] > 0:
                         chaps_pos[start + cursor_row] -= 1
                         screen.clear()
