@@ -22,8 +22,8 @@ epub [-h] [-d] EPUB
         * PgDown     - down a line  
 
 ### positional arguments ###
-  * EPUB        view EPUB
+    * EPUB        view EPUB
 
 ### optional arguments ###
-  * -h, --help  show this help message and exit
-  * -d, --dump  dump EPUB to text
+    * -h, --help  show this help message and exit
+    * -d, --dump  dump EPUB to text
