@@ -5,7 +5,7 @@ Based on https://github.com/rupa/epub
 
 ## Usage ##
 
-epub [-h] [-d] EPUB  
+    epub [-h] [-d] EPUB  
 
 ### Keyboard commands ###
     - Esc/q          - quit  
