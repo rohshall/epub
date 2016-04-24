@@ -20,11 +20,8 @@ Keyboard commands:
 
 import curses
 import curses.ascii
-from html.parser import HTMLParser
 from io import StringIO
-import formatter, locale, os, re, readline, tempfile, zipfile
-import base64, webbrowser
-
+import locale, os, re, tempfile, zipfile
 from bs4 import BeautifulSoup
 
 try:
