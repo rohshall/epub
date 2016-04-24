@@ -5,7 +5,11 @@ Based on https://github.com/rupa/epub
 
 ## Usage ##
 
-    epub [-h] [-d] EPUB  
+    epub [-h] [-d] <epub-file>  
+
+### optional arguments ###
+    * -h, --help  show this help message and exit
+    * -d, --dump  dump EPUB to text
 
 ### Keyboard commands ###
     - Esc/q          - quit  
@@ -20,10 +24,3 @@ Based on https://github.com/rupa/epub
         * Down       - down a page  
         * PgUp       - up a line  
         * PgDown     - down a line  
-
-### positional arguments ###
-    * EPUB        view EPUB
-
-### optional arguments ###
-    * -h, --help  show this help message and exit
-    * -d, --dump  dump EPUB to text
